@@ -55,8 +55,8 @@ function wyswietl_kalendarz()
     ");
     for ($i=1;$i<=($iledni+$pierwszydzien-1);$i++)
     {   
-        if($i>=$pierwszydzien && $licznik>=10 && $licznik%7==0){echo("<li class='niedziela'>".$licznik."</li>");$licznik++;}
-        elseif($i>=$pierwszydzien && $licznik<10 && $licznik%7==0){echo("<li class='niedziela'>0".$licznik."</li>");$licznik++;}
+        if($i>=$pierwszydzien && $licznik>=10 && $i%7==0){echo("<li class='niedziela'>".$licznik."</li>");$licznik++;}
+        elseif($i>=$pierwszydzien && $licznik<10 && $i%7==0){echo("<li class='niedziela'>0".$licznik."</li>");$licznik++;}
         elseif($i>=$pierwszydzien && $licznik<10 && $licznik<$ktorydzis){echo("<li class='nieaktywny'>0".$licznik."</li>");$licznik++;}
         elseif($i>=$pierwszydzien && $licznik>=10 && $licznik<$ktorydzis){echo("<li class='nieaktywny'>".$licznik."</li>");$licznik++;}
         elseif($i>=$pierwszydzien && $licznik<10 && $licznik == $ktorydzis){echo("<li class='akt'>"."<a href=panel.php?dzien=".$licznik."&miesiac=".$miesiac."&rok=".$rok.">0".$licznik."</a>"."</li>");$licznik++;}
@@ -92,7 +92,7 @@ function wyswietl_kalendarz()
         $iledni = 28;
     }
     $licznik = 1;
-    $pierwszydzien = abs((($iledni-$ktorydzis)%7+1+$aktualnydzien)%7);
+    $pierwszydzien = date(N, mktime(0, 0, 0, $miesiac, 1, $rok));
     
     echo ('<p>'.miesiac_pl_odm(date($miesiac)).' '); if(date(n)==12){echo(date(Y)+1);} else {echo(date(Y));} echo('</p>');
     echo("<div class=kalendarz>
@@ -383,23 +383,30 @@ function wyswietl_kalendarz()
 //dla zalogowanego początek ===============================================================================
     if(isset($_SESSION[zalogowany])){
         if(isset($_GET[dzien]) && isset($_GET[miesiac]) && isset($_GET[rok]))
-        {
+        {   
+            if($_GET[akcja]=="zablokuj"){
+                $zapytanie = mysql_query("select * from zablokowane_terminy where dzien=$_GET[dzien] and miesiac=$_GET[miesiac] and rok=$_GET[rok]");
+                $zapytanie = mysql_fetch_assoc($zapytanie);
+                if(empty($zapytanie)){
+                    $zapytanie = "INSERT INTO zablokowane_terminy (id,dzien,miesiac,rok,zablokowany_id1,zablokowany_id2,zablokowany_id3,zablokowany_id4) values (null,'".$_GET[dzien]."','".$_GET[miesiac]."','".$_GET[rok]."',wolny,wolny,wolny,wolny)";
+                    mysql_query($zapytanie);
+                }
+            }
+            if($_GET[akcja]=="odblokuj"){
+                mysql_query("UPDATE zablokowane_terminy SET zablokowany_id$_SESSION[zalogowany]='wolny' where dzien='".$_GET[dzien]."' and miesiac='".$_GET[miesiac]."' and rok='".$_GET[rok]."'");
+            }
             echo("<br><br>test ".$_GET[dzien].'.'.$_GET[miesiac].'.'.$_GET[rok]);
-        }
-        $zapytanie = mysql_query("select zablokowany_id$_SESSION[zalogowany] from zablokowane_terminy where dzien=$_GET[dzien] and miesiac=$_GET[miesiac] and rok=$_GET[rok]");
-        if(!empty($zapytanie)){
-        $zapytanie = mysql_fetch_assoc($zapytanie);
-        }
-        $zapytanie = $zapytanie[zablokowany_id.$_SESSION[zalogowany]];
-        if(empty($zapytanie)){$zapytanie='wolny';}
-        echo($zapytanie);
-        if ($zapytanie == 'zablokowany' && !in_array($_GET[akcja],$tablica)){
-            echo("<a href=panel.php?dzien=$_GET[dzien]&miesiac=$_GET[miesiac]&rok=$_GET[rok]&akcja=odblokuj> ODBLOKUJ TERMIN</a>");
-            unset($_GET[akcja]);
-        }
-        if ($zapytanie == 'wolny' && !in_array($_GET[akcja],$tablica)){
-            echo("<a href=panel.php?dzien=$_GET[dzien]&miesiac=$_GET[miesiac]&rok=$_GET[rok]&akcja=zablokuj> ZABLOKUJ TERMIN</a>");
-            unset($_GET[akcja]);            
+            $zapytanie = mysql_query("select zablokowany_id$_SESSION[zalogowany] from zablokowane_terminy where dzien=$_GET[dzien] and miesiac=$_GET[miesiac] and rok=$_GET[rok]");
+            $zapytanie = mysql_fetch_assoc($zapytanie);
+            $czywolny = $zapytanie[zablokowany_id.$_SESSION[zalogowany]];
+            if(empty($zapytanie)){$czywolny='wolny';}
+            echo($czywolny);
+            if ($czywolny == 'zablokowany' && !in_array($_GET[akcja],$tablica)){
+                echo("<a href=panel.php?dzien=$_GET[dzien]&miesiac=$_GET[miesiac]&rok=$_GET[rok]&akcja=odblokuj> ODBLOKUJ TERMIN</a>");
+            }
+            if ($czywolny == 'wolny' && !in_array($_GET[akcja],$tablica)){
+                echo("<a href=panel.php?dzien=$_GET[dzien]&miesiac=$_GET[miesiac]&rok=$_GET[rok]&akcja=zablokuj> ZABLOKUJ TERMIN</a>");
+            }
         }
             wyswietl_kalendarz();
         }

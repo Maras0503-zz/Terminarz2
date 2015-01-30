@@ -53,8 +53,8 @@ function wyswietl_kalendarz()
     ");
     for ($i=1;$i<=($iledni+$pierwszydzien-1);$i++)
     {   
-        if($i>=$pierwszydzien && $licznik>=10 && $licznik%7==0){echo("<li class='niedziela'>".$licznik."</li>");$licznik++;}
-        elseif($i>=$pierwszydzien && $licznik<10 && $licznik%7==0){echo("<li class='niedziela'>0".$licznik."</li>");$licznik++;}
+        if($i>=$pierwszydzien && $licznik>=10 && $i%7==0){echo("<li class='niedziela'>".$licznik."</li>");$licznik++;}
+        elseif($i>=$pierwszydzien && $licznik<10 && $i%7==0){echo("<li class='niedziela'>0".$licznik."</li>");$licznik++;}
         elseif($i>=$pierwszydzien && $licznik<10 && $licznik<$ktorydzis){echo("<li class='nieaktywny'>0".$licznik."</li>");$licznik++;}
         elseif($i>=$pierwszydzien && $licznik>=10 && $licznik<$ktorydzis){echo("<li class='nieaktywny'>".$licznik."</li>");$licznik++;}
         elseif($i>=$pierwszydzien && $licznik<10 && $licznik == $ktorydzis){echo("<li class='akt'>"."<a href=index.php?dzien=".$licznik."&miesiac=".$miesiac."&rok=".$rok."&temat=".$_GET[temat].">0".$licznik."</a>"."</li>");$licznik++;}
@@ -89,7 +89,7 @@ function wyswietl_kalendarz()
         $iledni = 28;
     }
     $licznik = 1;
-    $pierwszydzien = abs((($iledni-$ktorydzis)%7+1+$aktualnydzien)%7);
+    $pierwszydzien = date(N, mktime(0, 0, 0, $miesiac, 1, $rok));
     
     echo ('<p>'.miesiac_pl_odm(date($miesiac)).' '); if(date(n)==12){echo(date(Y)+1);} else {echo(date(Y));} echo('</p>');
     echo("<div class=kalendarz>
@@ -146,13 +146,22 @@ function wyswietl_kalendarz()
     </style>
 </head>
 <body>
+    <img src="CSS/LOGO1.gif" width=10% height=16% alt="logo"/>
 <?php
+    if(isset($_GET[zmiana])){
+    $serwer = "localhost";
+    $user = "mpadpl_admin";
+    $password = "admin123";
+    mysql_connect($serwer,$user,$password);
+    mysql_select_db("mpadpl_terminarz");
+    mysql_query("UPDATE klienci SET imie = '".$_GET[imie]."', nazwisko = '".$_GET[nazwisko]."', telefon = '".$_GET[telefon]."' where id='".$_GET[zmiana]."'");
+    }
     if(isset($_GET[akcja])){
         if($_GET[akcja] == "logout"){
             unset($_SESSION[zalogowany]);
         }
     }
-if(!isset($_GET[pyt1]))
+if(!isset($_GET[uwagi]))
 {
 if(isset($_GET[temat]))
 {
@@ -160,7 +169,7 @@ if(isset($_GET[temat]))
     {
     wyswietl_kalendarz();
     }
-    if(!empty($_GET["dzien"]) && !isset($_GET[pyt1]))
+    if(!empty($_GET["dzien"]) && !isset($_GET[uwagi]))
     {
         echo("<br><br>Wybrałeś dzień ".$_GET[dzien]." ".miesiac_pl($_GET[miesiac])."<br>");
         if(!$_GET[godzina])
@@ -171,7 +180,7 @@ if(isset($_GET[temat]))
     }
     else
     {
-        if(!isset($_GET[pyt1])){
+        if(!isset($_GET[uwagi])){
         echo ("<br><font color='red'>Aby wybrać godzinę spotkania najpierw wybierz dzień z powyższego kalendarza!</font><br><br>");
         }
     }  
@@ -189,9 +198,6 @@ if(isset($_GET[temat]))
     $exist = mysql_query("select * from klienci where email = '".$_GET[email]."'");
     $exist = mysql_num_rows($exist); 
     
-    if(isset($_GET[zmiana])){
-        mysql_query('update klienci set imie = '.$_GET[imie].' nazwisko = '.$_GET[nazwisko].' telefon = '.$_GET[telefon].' where id='.$_GET[zmiana]);
-    }
     
     if(isset($_SESSION[zalogowany])){
         $zal = mysql_query("select imie from pracownicy where id = '".$_SESSION[zalogowany]."'");
@@ -215,7 +221,7 @@ if(isset($_GET[temat]))
         <?php if(isset($_GET[temat])){echo("<input type='hidden' value='$_GET[dzien]'name='dzien'>");} ?>
         <input type="hidden" value="<?php echo($_GET[miesiac]) ?>" name="miesiac">
         <input type="hidden" value="<?php echo($_GET[rok]) ?>" name="rok">
-        <input type="hidden" value="<?php echo($_GET[godzina]) ?>" name="godzina">
+        <?php if(isset($_GET[dzien])){echo("<input type=hidden value=".$_GET[godzina]." name=godzina>");} ?>
         <?php if(isset($_GET[dzien])){echo("<input type='hidden' value='$_GET[temat]' name='temat'>");}
         ?>
     <?php
@@ -324,7 +330,7 @@ if(isset($_GET[temat]))
                         Tel.<input type="tel" name="telefon" required>
                         E-mail <input type="email" name="email" required>
                     ');}
-                    if(isset($_GET[imie]) && isset($_GET[nazwisko]) && isset($_GET[telefon])&& isset($_GET[email])){
+                    if(isset($_GET[imie]) && isset($_GET[nazwisko]) && isset($_GET[godzina]) && isset($_GET[telefon])&& isset($_GET[email])){
                     echo('Podaj dane kontaktowe<br>');
                         echo('Imię: <input type="text" name="imie" value='.$_GET[imie].' required disabled>
                         Nazwisko: <input type="text" name="nazwisko" value='.$_GET[nazwisko].' required disabled>
@@ -339,23 +345,10 @@ if(isset($_GET[temat]))
                     ');}
             }
             if(isset($_GET[dzien]) && isset($_GET[godzina]) && isset($_GET[temat])){
-                echo('<br><br>Podaj informacje dodatkowe:');
-                if($_GET[temat] == 1){echo('<br>
-                    Pytanie Pompy 1: <input type="text" name="pyt1" required><br>
-                    Pytanie Pompy 2: <input type="text" name="pyt2" required>
-                ');}
-                if($_GET[temat] == 2){echo('<br>
-                    Pytanie Piana 1: <input type="text" name="pyt1" required><br>
-                    Pytanie Piana 2: <input type="text" name="pyt2" required>                
-                ');}                
-                if($_GET[temat] == 3){echo('<br>
-                    Pytanie Prace 1: <input type="text" name="pyt1" required><br>
-                    Pytanie Prace 2: <input type="text" name="pyt2" required>                   
-                ');}
-                if($_GET[temat] == 4){echo('<br>
-                    Pytanie Termowizja 1: <input type="text" name="pyt1" required><br>
-                    Pytanie Termowizja 2: <input type="text" name="pyt2" required>                 
-                ');}
+                echo('<br><br>Podaj informacje które uważasz za istotne:');
+                echo('<br>
+                    <textarea name="uwagi" rows="6" cols="50" wrap="virtual"></textarea><br>
+                ');
                 echo('<br><br>
                     <input type="submit" value="Zapisz dane">
                 ');
@@ -373,36 +366,61 @@ if(isset($_GET[temat]))
     }
 }
 else{
-    if($_GET[akcja]=="zapis"){
+    if($_GET[akcja]=="zapiss" || $_GET[akcja]=="zapisks"){
         $serwer = "localhost";
         $user = "mpadpl_admin";
         $password = "admin123";
         mysql_connect($serwer,$user,$password);
-        mysql_select_db("mpadpl_terminarz");      
-        
-        //jeśli wszystko poprawne 
+        mysql_select_db("mpadpl_terminarz");   
+        $checkklient = mysql_query("select * from klienci where email = '".$_GET[email]."'");
+        $checkklient = mysql_fetch_assoc($checkklient);
+        $checkimie = $checkklient[imie];
+        $checknazwisko = $checkklient[nazwisko];
+        $checkemail = $checkklient[email];
+        $checktelefon = $checkklient[telefon];
+        $checkidk = $checkklient[id];
 
-         
-                $zapytanie = "INSERT INTO klienci (id,imie,nazwisko,email) values (null,'$_GET[imie]','$_GET[nazwisko]','$_GET[email]')" ;
+        $checkspotkanie = mysql_query("select * from spotkania where dzien = '".$_GET[dzien]."' and miesiac = '".$_GET[miesiac]."' and rok = '".$_GET[rok]."' and id_godziny = '".$_GET[godzina]."' and id_tematu = '".$_GET[temat]."'");
+        $checkspotkanie = mysql_fetch_assoc($checkspotkanie);
+        $checkdzien = $checkspotkanie[dzien];
+        $checkmiesiac = $checkspotkanie[miesiac];
+        $checkrok = $checkspotkanie[rok];      
+        $checkgodzina = $checkspotkanie[id_godziny];       
+        $checktemat = $checkspotkanie[id_tematu];
+        $checkklienta = $checkspotkanie[id_klienta]; 
+        
+        if($_GET[imie] == $checkimie && $_GET[nazwisko] == $checknazwisko && $_GET[email] == $checkemail && $_GET[dzien] == $checkdzien && $_GET[miesiac] == $checkmiesiac &&  
+            $_GET[rok] == $checkrok && $_GET[godzina] == $checkgodzina && $_GET[temat] == $checktemat && $checkklienta == $checkidk){
+        //ISTNIEJE I KLIENT I SPOTKANIE - LINK JUŻ UŻYTY DANE ZAPISANE NIC NIE ROBIMY
+            echo('Prawdopodobnie użyłeś już linku, wpis o spotkaniu istnieje już w bazie!<br>');        
+        }
+        else
+        {
+            //zapis do bazy po użuciu linka z maila
+            if($_GET[akcja]=="zapisks"){
+            $zapytanie = "INSERT INTO klienci (id,imie,nazwisko,email,telefon) values (null,'$_GET[imie]','$_GET[nazwisko]','$_GET[email]','$_GET[telefon]')" ;
                 if(mysql_query($zapytanie))
                 {
                    echo("Klient zapisany<br>");
                 }
-                //zapis spotkania
-                $idklienta = mysql_query("select id from klienci where email = '".$_GET[email]."' and imie = '".$_GET[imie]."'");
-                $idklienta = mysql_fetch_assoc($idklienta);
-                $idklienta = $idklienta[id];
+            }
+            //zapis spotkania
+            if($_GET[akcja]=="zapisks" ||$_GET[akcja]=="zapiss"){
+            $idklienta = mysql_query("select id from klienci where email = '".$_GET[email]."' and imie = '".$_GET[imie]."'");
+            $idklienta = mysql_fetch_assoc($idklienta);
+            $idklienta = $idklienta[id];
 
-                $zapytanie = "INSERT INTO spotkania (id,dzien,miesiac,rok,id_godziny,id_klienta,id_tematu) values (null,'$_GET[dzien]','$_GET[miesiac]','$_GET[rok]','$_GET[godzina]','$idklienta','$_GET[temat]')" ;
+            $zapytanie = "INSERT INTO spotkania (id,dzien,miesiac,rok,id_godziny,id_klienta,id_tematu,uwagi) values (null,'$_GET[dzien]','$_GET[miesiac]','$_GET[rok]','$_GET[godzina]','$idklienta','$_GET[temat]','$_GET[uwagi]')" ;
 
-                if(mysql_query($zapytanie))
-                {
-                   echo("Spotkanie zapisane<br>");
-                }
+            if(mysql_query($zapytanie))
+            {
+               echo("Spotkanie zapisane<br>");
+            }
+            }
         }
-
     }
-    if($_GET[akcja]!='zapis'){
+
+    if($_GET[akcja]!='zapisk' && $_GET[akcja]!='zapiss' && $_GET[akcja]!='zapisks'){
     $serwer = "localhost";
     $user = "mpadpl_admin";
     $password = "admin123";
@@ -427,42 +445,31 @@ else{
     
     $to      = $_GET[email];
     $subject = 'Link do zapisu na spotkanie';
+    $headers = 'From: marekpiesik1@wp.pl';
     
     if($_GET[imie] != $checkimie && $_GET[nazwisko] != $checknazwisko && $_GET[email] != $checkemail && $_GET[dzien] != $checkdzien && $_GET[miesiac] != $checkmiesiac &&  
         $_GET[rok] != $checkrok && $_GET[godzina] != $checkgodzina && $_GET[temat] != $checktemat){
+    //KLIENT ANI SPOTKANIE NIE ISTNIEJE ZAPIS KLIENTA I SPOTKANIA    
+            $message = 'www.mpad.pl/Terminarz/index.php?dzien='.$_GET[dzien].'&miesiac='.$_GET[miesiac].'&rok='.$_GET[rok].'&godzina='.$_GET[godzina].'&imie='.$_GET[imie].'&nazwisko='.$_GET[nazwisko].'&telefon='.$_GET[telefon].'&email='.$_GET[email].'&temat='.$_GET[temat].'&uwagi='.str_replace("\r\n",'+',str_replace(' ','+',$_GET[uwagi])).'&akcja=zapisks';
+            mail($to, $subject, $message, $headers);
+            echo('Wysłano maila na wskazany adres, aby dokończyć umawianie na spotkanie kliknij na wysłany link');
         
         }
     
     if($checkimie == $_GET[imie] && $checknazwisko == $_GET[nazwisko]){
-        $message = 'www.mpad.pl/Terminarz/index.php?dzien='.$_GET[dzien].'&miesiac='.$_GET[miesiac].'&rok='.$_GET[rok].'&godzina='.$_GET[godzina].'&imie='.$_GET[imie].'&nazwisko='.$_GET[nazwisko].'&telefon='.$_GET[telefon].'&email='.$_GET[email].'&temat='.$_GET[temat].'&pyt1='.$_GET[pyt1].'&pyt2='.$_GET[pyt2].'&akcja=zapis';
-        $headers = 'From: marekpiesik1@wp.pl';
+    //KLIENT ISTNIEJE A SPOTKANIE NIE ISTNIEJE ZAPIS SPOTKANIA Z PRZYPISANIEM ID ISTNIEJĄCEGO KLIENTA    
+        $message = 'www.mpad.pl/Terminarz/index.php?dzien='.$_GET[dzien].'&miesiac='.$_GET[miesiac].'&rok='.$_GET[rok].'&godzina='.$_GET[godzina].'&imie='.$_GET[imie].'&nazwisko='.$_GET[nazwisko].'&telefon='.$_GET[telefon].'&email='.$_GET[email].'&temat='.$_GET[temat].'&uwagi='.str_replace("\r\n",'+',str_replace(' ','+',$_GET[uwagi])).'&akcja=zapiss';
         mail($to, $subject, $message, $headers);
+        echo('Wysłano maila na wskazany adres, aby dokończyć umawianie na spotkanie kliknij na wysłany link<br>');
     } 
-    elseif($checkimie != $_GET[imie] || $checknazwisko != $_GET[nazwisko] || $checktelefon != $_GET[telefon]) {
-        echo("<b>Ktory zestaw danych jest poprawny:</b><br>");
-        echo("Dane z formularza:<b> $_GET[imie] $_GET[nazwisko] $_GET[telefon] $_GET[email] ==></b><a href=index.php?dzien=".$_GET[dzien]."&miesiac=".$_GET[miesiac]."&rok=".$_GET[rok]."&godzina=".$_GET[godzina]."&imie=".$_GET[imie]."&nazwisko=".$_GET[nazwisko]."&telefon=".$_GET[telefon]."&email=".$_GET[email]."&temat=".$_GET[temat]."&pyt1=".$_GET[pyt1]."&pyt2=".$_GET[pyt2]."&akcja=zapis>Wybierz</a><br><br>");
-        echo("Dane z bazy danych:<b> $checkimie $checknazwisko $checktelefon $checkemail ==></b><a href=index.php?dzien=".$_GET[dzien]."&miesiac=".$_GET[miesiac]."&rok=".$_GET[rok]."&godzina=".$_GET[godzina]."&imie=".$checkimie."&nazwisko=".$checknazwisko."&telefon=".$_GET[telefon]."&email=".$_GET[email]."&temat=".$_GET[temat]."&pyt1=".$_GET[pyt1]."&pyt2=".$_GET[pyt2]."&akcja=zapis&zmiana=$checkidka'>Wybierz</a><br><br>");
+    if(($checkimie != $_GET[imie] || $checknazwisko != $_GET[nazwisko]) && $checkemail == $_GET[email]) {
+    //IMIE I NAZWISKO RÓŻNI SIĘ OD TYCH PODANYCH W BAZIE DO WSKAZANEGO EMAILA - PYTANIE O TO KTÓRE SĄ POPRAWNE
+    //JEŚLI TE W BAZIE TO WYSŁANIE MAILA
+    //JEŚLI TE W FORMULARZU TO ZMIANA TYCH W BAZIE
+        echo("<b>W bazie istnieją informacje o kliencie o takim adresie e-mail lecz pozostałe dane różnią się. <br>Ktory zestaw danych jest poprawny:</b><br>");
+        echo("Dane z formularza:<b> $_GET[imie] $_GET[nazwisko] $_GET[telefon] $_GET[email] ==></b><a href=index.php?dzien=".$_GET[dzien]."&miesiac=".$_GET[miesiac]."&rok=".$_GET[rok]."&godzina=".$_GET[godzina]."&imie=".$_GET[imie]."&nazwisko=".$_GET[nazwisko]."&telefon=".$_GET[telefon]."&email=".$_GET[email]."&temat=".$_GET[temat]."&uwagi=".str_replace("\r\n",'+',str_replace(' ','+',$_GET[uwagi]))."&zmiana=$checkidk>Wybierz</a><br><br>");
+        echo("Dane z bazy danych:<b> $checkimie $checknazwisko $checktelefon $checkemail ==></b><a href=index.php?dzien=".$_GET[dzien]."&miesiac=".$_GET[miesiac]."&rok=".$_GET[rok]."&godzina=".$_GET[godzina]."&imie=".$checkimie."&nazwisko=".$checknazwisko."&telefon=".$_GET[telefon]."&email=".$_GET[email]."&temat=".$_GET[temat]."&uwagi=".str_replace("\r\n",'+',str_replace(' ','+',$_GET[uwagi])).">Wybierz</a><br><br>");
     }
-    if($_GET[imie] == $checkimie && $_GET[nazwisko] == $checknazwisko && $_GET[email] == $checkemail && $_GET[dzien] == $checkdzien && $_GET[miesiac] == $checkmiesiac &&  
-           $_GET[rok] == $checkrok && $_GET[godzina] == $checkgodzina && $_GET[temat] == $checktemat && $checkklienta == $checkidk){
-                echo('Prawdopodobnie użyłeś już linku, wpis o spotkaniu istnieje już w bazie!<br>');
-            
-        }
-            elseif($_GET[email] == $checkemail && $_GET[dzien] != $checkdzien && $_GET[miesiac] != $checkmiesiac &&  
-           $_GET[rok] != $checkrok && $_GET[godzina] != $checkgodzina && $_GET[temat] != $checktemat){
-                //zapis spotkania
-                $idklienta = mysql_query("select id from klienci where email = '".$_GET[email]."'");
-                $idklienta = mysql_fetch_assoc($idklienta);
-                $idklienta = $idklienta[id];
-
-                $zapytanie = "INSERT INTO spotkania (id,dzien,miesiac,rok,id_godziny,id_klienta,id_tematu) values (null,'$_GET[dzien]','$_GET[miesiac]','$_GET[rok]','$_GET[godzina]','$idklienta','$_GET[temat]')" ;
-
-                if(mysql_query($zapytanie))
-                {
-                   echo("Spotkanie zapisane<br>");
-                }
-        }
-
     }
     echo('Dzien: '.$_GET[dzien].'<br>');
     echo('Miesiac: '.$_GET[miesiac].'<br>');
@@ -473,11 +480,10 @@ else{
     echo('Telefon: '.$_GET[telefon].'<br>');
     echo('Email: '.$_GET[email].'<br>');
     echo('Temat spotkania: '.$_GET[temat].'<br>');
-    echo('Pytanie1: '.$_GET[pyt1].'<br>');
-    echo('Pytanie2: '.$_GET[pyt2].'<br>');
+    echo('Uwagi: '.$_GET[uwagi].'<br>');
     echo('<a href=index.php>Zakończ</a>');
+}
     ?>
-    
        <a href="panel.php">Panel administracyjny</a>
 </body>
 </html>
